@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+    
+<mapper namespace="site.filmax.admin.dao.MemberMapper">
+
+	<!-- 전체 회원목록(직원제외) -->
+	<select id="memberList" resultType="site.filmax.admin.dto.MemberDTO">
+		select * from member m, levels s where m.levels = s.levels order by m.user_no
+	</select>
+	
+	<!-- 해당 레벨의 아이디 모두나오게 -->
+	<select id="idLevels" resultType="site.filmax.admin.dto.MemberDTO" parameterType="site.filmax.admin.dto.MemberDTO">
+		<!-- select * from levels s, member m where s.levels=#{levels} and m.levels = s.levels(+) order by m.name -->
+		<![CDATA[ 
+			select * from (
+  			  select mem.*, rownum r from (
+       			 select m.*,s.levels_name,s.staff from member m,levels s where s.levels=#{levels} and m.levels = s.levels(+) order by m.name
+   				) mem 
+			)where  r >= #{start} and r <= #{end}
+		]]>
+	</select>
+	
+	<!-- 로그인시 아이디체크 직원일때 -->
+    <select id="idCount" resultType="int" parameterType="site.filmax.admin.dto.MemberDTO" >
+    	select count(*) from member m, levels s where m.levels = s.levels and m.user_id= #{user_id} and m.user_pw=#{user_pw} and s.staff=1 and m.levels != 21
+    	<!-- select count(*) from member where user_id=#{user_id} and user_pw=#{user_pw} and levels != 80 -->
+    </select>
+    <!-- 회원 레벨 개인프로필 -->
+    <select id="profile" resultType="site.filmax.admin.dto.MemberDTO" >
+    	select * from member m, levels s where m.levels = s.levels(+) and user_id=#{user_id}
+    </select>
+    <!-- 레벨 변경 -->
+	<update id="levelsCh" parameterType="site.filmax.admin.dto.MemberDTO">
+		update member set levels=#{levels},marketing=#{marketing} where user_id = #{user_id}
+	</update>
+	<!-- 회원 레벨만 보여주는 타입 -->
+	<select id="levelsType" resultType="site.filmax.admin.dto.LevelsDTO">
+		select * from levels where staff = 0
+	</select>
+	<!-- 로그인 시간 -->
+	<update id="loginTime">
+		update member set lastlogin=sysdate where user_id=#{user_id}
+	</update>
+	<select id= "mCount" resultType="int">
+		select count(*) from member
+	</select>
+	<select id="mlCount" resultType="int" parameterType="int">
+		select count(*) from member m, levels s where m.levels = s.levels and m.levels=#{levels} 
+	</select>
+	<select id="sumAllMemberByMonth" resultType="hashmap">
+	<![CDATA[
+		select distinct 
+		    to_char(reg, 'YYYY/MM') as year_month,
+		    sum(allMember) over(partition by to_char(reg, 'YYYY/MM')) as total_amount
+		    from(
+		        select * from gorder where reg >= #{startDate} and reg < #{endDate}
+		)gorder order by year_month
+	]]>
+	</select>
+	
+	
+	<!-- 모든등급표시 -->
+	
+	
+	<!-- 회원목록 id순 정렬 couponList에서 사용 -->
+	<select id="member_id" resultType="site.filmax.admin.dto.MemberDTO">
+		select * from member order by user_id
+	</select>
+	
+	<!-- 비회원목록 -->
+	<select id="guestList" resultType="site.filmax.admin.dto.GuestDTO">
+		select * from guest
+	</select>
+	
+	<!-- 모든쿠폰목록 -->
+	<select id="couponList" resultType="site.filmax.admin.dto.CouponDTO">
+		select c.num, c.user_id, t.name, t.info, t.sale, c.use, c.usetime
+			from coupon c, coupon_type t
+				where c.type = t.type order by user_id
+	</select>
+	<!-- 회원아이디로 쿠폰목록검색 -->
+	<select id="coupon_id" resultType="site.filmax.admin.dto.CouponDTO" parameterType="site.filmax.admin.dto.MemberDTO">
+		select * 
+			from coupon c, coupon_type t
+				where user_id=#{idCoupon} and c.type = t.type
+	</select>
+	
+	<!-- 쿠폰검색 -->
+	<select id="searchCouponList" resultType="site.filmax.admin.dto.CouponDTO">
+		select c.num, c.user_id, t.name, t.info, t.sale, c.use, c.usetime
+			from coupon c, coupon_type t
+				where t.type = c.type and ${search} like '%'||#{searchValue}||'%'
+					order by c.num desc
+	</select>
+	<!-- 쿠폰종류 -->
+	<select id="coupon_typeList" resultType="site.filmax.admin.dto.Coupon_typeDTO">
+		select * from coupon_type order by type
+	</select>
+	
+	<!-- 전체포인트목록 -->
+	<select id="pointList" resultType="site.filmax.admin.dto.PointDTO">
+		select p.num, p.pointnum, pn.pointinfo, p.user_id, p.pluspoint, p.usepoint, p.totalpoint, p.usedate
+    from point p, pointname pn where p.pointnum = pn.pointnum order by user_id
+	</select>
+	
+	<!-- 회원아이디로 포인트목록검색 -->
+	<select id="point_id" resultType="site.filmax.admin.dto.PointDTO" parameterType="site.filmax.admin.dto.MemberDTO">
+		select * from point p, pointname pn
+    			where user_id=#{user_id} and p.pointnum = pn.pointnum order by num
+	</select>
+	
+	<!-- 쿠폰(type)생성 -->
+	<insert id="couponCreate" parameterType="site.filmax.admin.dto.Coupon_typeDTO">
+		insert into coupon_type values(coupon_type_seq.nextval, #{name}, #{info}, #{sale}, #{expiredate})
+	</insert>
+	
+	<!-- 쿠폰발급 -->
+	<insert id="couponAdd" parameterType="site.filmax.admin.dto.Coupon_typeDTO">
+		insert into coupon values(#{user_id}, coupon_seq.nextval, #{type}, 'n', sysdate + #{expiredate})
+	</insert>
+	
+	<!-- 포인트사유 -->
+	<select id="pointnameList" resultType="site.filmax.admin.dto.PointnameDTO">
+		select * from pointname order by pointnum
+	</select>
+	
+	<!-- 포인트 업데이트 -->
+    <insert id="pointUpdate" parameterType="site.filmax.admin.dto.PointDTO">
+    	insert into point values(point_seq.nextval, #{pointnum}, #{user_id}, #{pluspoint}, #{usepoint},
+    		(select nvl(avg(totalpoint),0) totalpoint from(select * from point order by rownum desc) where user_id=#{user_id} and rownum=1)
+    			 + #{pluspoint} - #{usepoint}, sysdate)
+    </insert>
+	
+	
+	
+	
+	
+</mapper>
+
+
+
+
+
