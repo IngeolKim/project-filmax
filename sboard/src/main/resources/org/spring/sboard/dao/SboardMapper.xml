@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+<mapper namespace="org.spring.sboard.dao.SboardMapper">
+
+	<select id="boardCount" resultType="int">
+		select count(*) from sboard
+	</select>
+
+	<insert id="sboardInsert" parameterType="org.spring.sboard.dto.SboardDTO">
+		insert into sboard(num,writer,subject,email,content,pw,boardType,ref,levels,step) 
+			values(sboard_seq.nextval,#{writer},#{subject},#{email},#{content},#{pw},#{boardType},#{ref},#{levels},#{step})
+		<selectKey order="AFTER" resultType="int" keyProperty="num">		<!-- select 쿼리문의 값을 num에 값에 대입한다  -->		
+			select sboard_seq.currval from dual			<!-- dual 은 테이블 이름을 적을 필요가 없을때 -->
+		</selectKey>
+	</insert>
+	
+	<insert id="fileNameInsert" parameterType="org.spring.sboard.dto.SboardFileDTO">
+		insert into sboard_file values(sboard_file_seq.nextval,#{sboardNum},#{fileName})
+	</insert>
+	
+	<update id="fileRef" parameterType="org.spring.sboard.dto.SboardDTO">
+		update sboard set files=#{files},ref=#{ref}, levels=#{levels}, step=#{step} where num=#{num}
+	</update>
+	
+	<select id="allList" resultType = "org.spring.sboard.dto.SboardDTO">
+		<![CDATA[					
+		select * from
+    		(select s.*, rownum r from
+        		(select * from sboard order by ref desc, step) s)
+           			 where r >= #{start} and r <= #{end}
+         ]]>	  			 
+	</select>
+	<select id="boardList" resultType = "org.spring.sboard.dto.SboardDTO">
+		select * from sboard where boardType=#{boardType} order by ref desc, step
+	</select>
+	
+	<update id="readCount" parameterType="int">
+		update sboard set readCount = readCount+1 where num=#{num}
+	</update>
+	<select id="readNum" parameterType="int" resultType="org.spring.sboard.dto.SboardDTO" >
+		select * from sboard where num=#{num}
+	</select>
+	
+	<select id="fileList" parameterType="int" resultType="String">
+		select fileName from sboard_file where sboardNum=#{boardNum}
+	</select>
+	
+	<update id="stepUp">
+		update sboard set step = step+1 where ref=#{ref} and step > #{step}
+	</update>
+	
+	<select id="typeList" resultType="org.spring.sboard.dto.SboardTypeDTO" >
+		select * from sboard_type
+	</select>
+	
+	<insert id="likeInsert" parameterType="org.spring.sboard.dto.SboardLikeDTO">
+		insert into sboard_like values(sboard_like_seq.nextval, #{sboardNum},#{writer})
+	</insert>
+	<delete id="likeDelete" parameterType="org.spring.sboard.dto.SboardLikeDTO">
+		delete from sboard_like where sboardNum=#{sboardNum} and writer=#{writer}	
+	</delete>
+	
+	<select id="sboardNumLike" resultType="int" parameterType="org.spring.sboard.dto.SboardLikeDTO">
+		select count(*) from sboard_like where sboardNum=#{sboardNum} and writer=#{writer}
+	</select>
+	
+	<select id="typeList2" resultType="org.spring.sboard.dto.SboardTypeDTO" >
+		select * from sboard_type order by num
+	</select>
+	
+	<select id="searchList" resultType="org.spring.sboard.dto.SboardDTO">
+		select * from sboard where ${search} like '%'||#{searchValue}||'%'order by num desc
+	</select>
+	
+	<insert id="replyInsert" parameterType="org.spring.sboard.dto.SboardReplyDTO">
+		insert into sboard_reply(num, boardNum, id, content, ref, step, levels) 
+						values(sboard_reply_seq.nextval, #{boardNum}, #{id}, #{content}, #{ref},#{step},#{levels})
+		<selectKey order="AFTER" resultType="int" keyProperty="num">		<!-- select 쿼리문의 값을 num에 값에 대입한다  -->		
+			select sboard_reply_seq.currval from dual						<!-- dual 은 테이블 이름을 적을 필요가 없을때 -->
+		</selectKey>
+	</insert>
+	
+	<update id="replyRef" parameterType="org.spring.sboard.dto.SboardReplyDTO">
+		update sboard_reply set ref=#{ref} where num=#{num}
+	</update>
+	
+	<update id="replyStep" parameterType="org.spring.sboard.dto.SboardReplyDTO">
+		update sboard_reply set step=#{step}, levels=#{levels} where num=#{num}
+	</update>
+	<update id="replyStepUp" parameterType="org.spring.sboard.dto.SboardReplyDTO">
+		update sboard_reply set step = step+1 where ref=#{ref} and step > #{step}
+	</update>
+	
+	<select id="replyList" resultType="org.spring.sboard.dto.SboardReplyDTO">
+		select * from sboard_reply where boardNum = #{boardNum} order by ref desc, step
+	</select>
+	
+</mapper>

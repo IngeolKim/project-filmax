@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.spring.smember.dao.SmemberMapper">
+	<select id="login" resultType="int" parameterType="org.spring.smember.dto.SmemberDTO">
+		select count(*) from smember where id=#{id} and pw=#{pw}
+	</select>
+	<insert id="inputMember" parameterType="org.spring.smember.dto.SmemberDTO">
+		insert into smember values(#{id},#{pw},#{name},#{tel},#{birth},#{img},1,sysdate)
+	</insert>
+</mapper>
